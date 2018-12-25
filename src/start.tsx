@@ -3,11 +3,8 @@ import blessed, {Widgets} from 'blessed';
 import React from 'react';
 import {render} from 'react-blessed';
 import {App} from './app';
-import os from 'os';
-import path from 'path';
-import fs from 'fs';
-import './utils/global-fetch-polyfill';
 import {readConfig} from './config';
+import './utils/global-fetch-polyfill';
 
 const APP_NAME = 'AcroCommander';
 
@@ -29,8 +26,6 @@ async function startApp() {
   });
 
   const capabilities = await acrolinxEndpoint.getCheckingCapabilities(config.accessToken);
-  // console.log(JSON.stringify(capabilities, null, 2));
-  // console.log(capabilities.referencePattern);
 
   const screen: Widgets.Screen = blessed.screen({
     autoPadding: true,
@@ -44,7 +39,6 @@ async function startApp() {
     config={config}
     referencePattern={capabilities.referencePattern}
   />, screen);
-
 }
 
 startApp().catch((error) => {
