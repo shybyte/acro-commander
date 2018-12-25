@@ -9,7 +9,7 @@ import * as _ from 'lodash';
 import path from 'path';
 import React, {Component} from 'react';
 import {FastList} from './components/fast-list';
-import {MenuBar, MenuItem} from './components/menu-bar';
+import {executeIfEnabled, MenuBar, MenuItem} from './components/menu-bar';
 import {Config} from './config';
 import './utils/global-fetch-polyfill';
 import Timeout = NodeJS.Timeout;
@@ -31,6 +31,7 @@ interface AppState {
   isWorkingIndex: number;
   count: number;
   menu: MenuItem[];
+  aggregatedReportUrl?: string;
   message?: string;
 }
 
@@ -64,8 +65,12 @@ export class App extends Component<AppProps, AppState> {
         {text: 'Add', keys: ['f1'], callback: this.add, isEnabled: _.constant(true)},
         {text: 'Check', keys: ['f2'], callback: this.check, isEnabled: this.hasFilesToCheck},
         {text: 'Scorecard', keys: ['f3'], callback: this.onCheckItemAction, isEnabled: this.checkItemActionPossible},
-        {text: 'Clear', keys: ['f4'], callback: this.clear, isEnabled: this.hasFilesToCheck},
-        {text: 'Remove', keys: ['f5'], callback: this.removeCheckItem, isEnabled: this.checkItemActionPossible},
+        {
+          text: 'Analysis', keys: ['f4'], callback: this.openAnalysisDashboard,
+          isEnabled: () => !!this.state.aggregatedReportUrl
+        },
+        {text: 'Clear', keys: ['f5'], callback: this.clear, isEnabled: this.hasFilesToCheck},
+        {text: 'Remove', keys: ['f6'], callback: this.removeCheckItem, isEnabled: this.checkItemActionPossible},
         {text: 'Quit', keys: ['f10', 'escape', 'q', 'C-c'], callback: this.quit, isEnabled: _.constant(true)},
       ],
     };
@@ -103,7 +108,7 @@ export class App extends Component<AppProps, AppState> {
 
   componentDidMount(): void {
     for (const menuItem of this.state.menu) {
-      this.props.screen.key(menuItem.keys, menuItem.callback);
+      this.props.screen.key(menuItem.keys, executeIfEnabled(menuItem));
     }
 
     this.props.screen.key(['tab'], this.changeFocus);
@@ -131,17 +136,26 @@ export class App extends Component<AppProps, AppState> {
     }
   }
 
-  check = () => {
+  check = async () => {
+    const batchId = getUUID('ac');
+
     this.batchChecker.checkOptions = {
-      batchId: getUUID('ac'),
+      batchId: batchId,
       guidanceProfileId: this.props.config.guidanceProfile,
       disableCustomFieldValidation: true,
       checkType: CheckType.batch,
       reportTypes: [ReportType.request_text, ReportType.scorecard]
     };
     this.batchChecker.start();
+
     this.startWorkingIndicator();
-  };
+
+    const {reports} = await this.props.acrolinxEndpoint.getLinkToAggregatedReport(
+      this.props.config.accessToken, batchId);
+    this.setState({
+      aggregatedReportUrl: _.find(reports, (report) => report.reportType === 'withApiKey')!.link
+    });
+  }
 
   quit = () => {
     process.exit(0);
@@ -248,6 +262,12 @@ export class App extends Component<AppProps, AppState> {
 
     if ('reports' in selectedItem.state && selectedItem.state.reports[ReportType.scorecard]) {
       openUrl(selectedItem.state.reports[ReportType.scorecard].linkAuthenticated);
+    }
+  };
+
+  private openAnalysisDashboard = () => {
+    if (this.state.aggregatedReportUrl) {
+      openUrl(this.state.aggregatedReportUrl);
     }
   };
 

@@ -33,7 +33,7 @@ export class MenuBar extends Component<MenuBarProps, MenuBarState> {
 
   componentDidMount(): void {
     for (const menuItem of this.props.menuItems) {
-      (this.refs[menuItem.text] as any).on('click', menuItem.callback);
+      (this.refs[menuItem.text] as any).on('click', executeIfEnabled(menuItem));
     }
   }
 
@@ -71,4 +71,12 @@ function getMenuItemContent(menuItem: MenuItem): string {
   const keyPart = '{#222-bg} ' + menuItem.keys[0].toUpperCase();
   const labelPart = `{cyan-bg}{#${menuItem.isEnabled() ? '000' : '666'}-fg}` + menuItem.text;
   return keyPart + labelPart
+}
+
+export function executeIfEnabled(menuItem: MenuItem) {
+  return () => {
+    if (menuItem.isEnabled()) {
+      menuItem.callback();
+    }
+  };
 }
