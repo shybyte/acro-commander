@@ -1,23 +1,21 @@
-import {AcrolinxEndpoint, AcrolinxEndpointProps, CheckType, DEVELOPMENT_SIGNATURE, ReportType} from 'acrolinx-api';
-import {BatchCheckerInternal, getUUID, ICheckResult} from 'acrolinx-batch-api';
+import {AcrolinxEndpoint, CheckType, ReportType} from 'acrolinx-api';
+import {BatchCheckerInternal, getUUID, ICheckResult, openUrl} from 'acrolinx-batch-api';
 import {FileCrawler} from 'acrolinx-batch-api/dist/src/crawler/file-crawler';
 import {SimpleFileCrawler} from 'acrolinx-batch-api/dist/src/crawler/simple-file-crawler';
 import {ICheckItem} from 'acrolinx-batch-api/src/batch-checker-internal';
-import path from 'path';
+import {Widgets} from 'blessed';
 import fs from 'fs';
-import React, {Component} from 'react';
-import blessed, {Widgets} from 'blessed';
-import {render} from 'react-blessed';
-import Screen = Widgets.Screen;
-import FileManagerElement = Widgets.FileManagerElement;
-import './utils/global-fetch-polyfill';
-import Timeout = NodeJS.Timeout;
 import * as _ from 'lodash';
+import path from 'path';
+import React, {Component} from 'react';
 import {FastList} from './components/fast-list';
 import {MenuBar, MenuItem} from './components/menu-bar';
+import './utils/global-fetch-polyfill';
+import Timeout = NodeJS.Timeout;
 import BoxElement = Widgets.BoxElement;
 import BoxOptions = Widgets.BoxOptions;
-import opn from 'opn';
+import FileManagerElement = Widgets.FileManagerElement;
+import Screen = Widgets.Screen;
 
 interface AppProps {
   screen: Screen;
@@ -213,7 +211,7 @@ export class App extends Component<AppProps, AppState> {
   private openScoreCard = () => {
     const selectedItem = this.state.filesToCheck[this.checkItemListRef.current!.selectedIndex];
     if ('reports' in selectedItem.state && selectedItem.state.reports[ReportType.scorecard]) {
-      opn(selectedItem.state.reports[ReportType.scorecard].linkAuthenticated);
+      openUrl(selectedItem.state.reports[ReportType.scorecard].linkAuthenticated);
     }
   };
 
