@@ -10,12 +10,12 @@ import path from 'path';
 import React, {Component} from 'react';
 import {FastList} from './components/fast-list';
 import {MenuBar, MenuItem} from './components/menu-bar';
-import './utils/global-fetch-polyfill';
 import {Config} from './config';
+import './utils/global-fetch-polyfill';
 import Timeout = NodeJS.Timeout;
-import BoxElement = Widgets.BoxElement;
 import BoxOptions = Widgets.BoxOptions;
 import FileManagerElement = Widgets.FileManagerElement;
+import MessageElement = Widgets.MessageElement;
 import Screen = Widgets.Screen;
 
 interface AppProps {
@@ -31,15 +31,18 @@ interface AppState {
   isWorkingIndex: number;
   count: number;
   menu: MenuItem[];
+  message?: string;
 }
 
 
 export class App extends Component<AppProps, AppState> {
   batchChecker: BatchCheckerInternal;
   renderCount: number = 0;
+
   fileManagerRef = React.createRef<FileManagerElement>();
   checkItemListRef = React.createRef<FastList>();
-  boxRef = React.createRef<BoxElement>();
+  messageRef = React.createRef<MessageElement>();
+
   focusedElement: any;
 
   constructor(props: AppProps) {
@@ -60,17 +63,18 @@ export class App extends Component<AppProps, AppState> {
       menu: [
         {text: 'Add', keys: ['f1'], callback: this.add, isEnabled: _.constant(true)},
         {text: 'Check', keys: ['f2'], callback: this.check, isEnabled: this.hasFilesToCheck},
-        {text: 'Scorecard', keys: ['f3'], callback: this.openScoreCard, isEnabled: this.canRemove},
+        {text: 'Scorecard', keys: ['f3'], callback: this.onCheckItemAction, isEnabled: this.checkItemActionPossible},
         {text: 'Clear', keys: ['f4'], callback: this.clear, isEnabled: this.hasFilesToCheck},
-        {text: 'Remove', keys: ['f5'], callback: this.removeCheckItem, isEnabled: this.canRemove},
+        {text: 'Remove', keys: ['f5'], callback: this.removeCheckItem, isEnabled: this.checkItemActionPossible},
         {text: 'Quit', keys: ['f10', 'escape', 'q', 'C-c'], callback: this.quit, isEnabled: _.constant(true)},
-      ]
+      ],
     };
   }
 
   hasFilesToCheck = () => this.state.filesToCheck.length > 0
 
-  canRemove = () => this.hasFilesToCheck() && this.props.screen.focused === this.checkItemListRef.current!.focusElement
+  checkItemActionPossible = () =>
+    this.hasFilesToCheck() && this.props.screen.focused === this.checkItemListRef.current!.focusElement
 
   startWorkingIndicator = () => {
     const timeout = setInterval(() => {
@@ -168,7 +172,7 @@ export class App extends Component<AppProps, AppState> {
           keys={true}
           mouse={true}
           invertSelected={true}
-          {...commonListStyle(this.props.screen.focused === (this.fileManagerRef.current && this.fileManagerRef.current) )}
+          {...commonListStyle(this.props.screen.focused === (this.fileManagerRef.current && this.fileManagerRef.current))}
         >
         </blessed-filemanager>
 
@@ -177,18 +181,36 @@ export class App extends Component<AppProps, AppState> {
           screen={this.props.screen}
           label={this.getCheckItemListLabel()}
           left="50%" height="100%-1"
-          {...commonListStyle(this.props.screen.focused === (this.checkItemListRef.current && this.checkItemListRef.current.focusElement) )}
+          {...commonListStyle(this.props.screen.focused === (this.checkItemListRef.current && this.checkItemListRef.current.focusElement))}
           items={filesToCheck.map(this.renderCheckItem)}
+          onEnter={this.onCheckItemAction}
         >
         </FastList>
 
         <MenuBar top="100%-1" menuItems={this.state.menu} screen={this.props.screen}/>
+
+        {this.state.message && <blessed-message
+          ref={this.messageRef}
+          content={this.state.message}
+          top="center"
+          left="center"
+          width="50%"
+          height="50%"
+          border={{type: 'line'}}
+          style={{
+            bg: 'red',
+            border: {bg: 'red'},
+          }}
+        />}
 
       </>
     );
   }
 
   private renderCheckItem = (checkItem: ICheckItem): string => {
+    if ('error' in checkItem.state) {
+      return '{red-fg}{white-bg}ERR{/} ' + checkItem.file
+    }
     if ('acrolinxScore' in checkItem.state) {
       const {acrolinxScore, qualityStatus} = checkItem.state;
       const acrolinxScorePadded = _.padStart(acrolinxScore.toString(), 3);
@@ -211,8 +233,19 @@ export class App extends Component<AppProps, AppState> {
     this.batchChecker.removeCheckItem(selectedItem.id);
   };
 
-  private openScoreCard = () => {
+  private onCheckItemAction = () => {
     const selectedItem = this.state.filesToCheck[this.checkItemListRef.current!.selectedIndex];
+
+    if ('error' in selectedItem.state) {
+      this.setState({
+        message: selectedItem.state.error.message
+      });
+      setTimeout(() => {
+        this.setState({message: undefined});
+      }, 1000);
+      return;
+    }
+
     if ('reports' in selectedItem.state && selectedItem.state.reports[ReportType.scorecard]) {
       openUrl(selectedItem.state.reports[ReportType.scorecard].linkAuthenticated);
     }
@@ -222,7 +255,7 @@ export class App extends Component<AppProps, AppState> {
     this.onChangedCheckItems();
   };
 
-  private batchCheckDone = (batchCheckFinished: IBatchCheckFinished) => {
+  private batchCheckDone = (_batchCheckResult: IBatchCheckFinished) => {
     this.onChangedCheckItems();
     this.stopWorkingIndicator();
   };

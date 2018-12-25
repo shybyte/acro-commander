@@ -10,6 +10,7 @@ interface FastListProps extends BoxOptions {
   items: string[]
   label: string;
   screen: Screen;
+  onEnter: () => void;
 }
 
 interface FastListState {
@@ -42,7 +43,9 @@ export class FastList extends Component<FastListProps, FastListState> {
       const height = this.getInnerListHeight();
       const selectedIndex = (listElement as any).selected;
       const offset = this.state.offset;
-      if (key.name === 'down') {
+      if (key.name === 'enter') {
+        this.props.onEnter();
+      } else if (key.name === 'down') {
         if (selectedIndex === height - 1 && offset < this.props.items.length - this.getInnerListHeight()) {
           const newOffset = offset + 1;
           delete (listElement as any).selected;
@@ -66,6 +69,7 @@ export class FastList extends Component<FastListProps, FastListState> {
         }
       }
     });
+
   }
 
   get focusElement() {
@@ -73,7 +77,6 @@ export class FastList extends Component<FastListProps, FastListState> {
   }
 
   focus() {
-
     this.listRef.current!.focus();
   }
 
