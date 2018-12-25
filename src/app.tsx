@@ -1,5 +1,5 @@
 import {AcrolinxEndpoint, CheckType, ReportType} from 'acrolinx-api';
-import {BatchCheckerInternal, getUUID, ICheckResult, openUrl} from 'acrolinx-batch-api';
+import {BatchCheckerInternal, getUUID, IBatchCheckFinished, ICheckResult, openUrl} from 'acrolinx-batch-api';
 import {FileCrawler} from 'acrolinx-batch-api/dist/src/crawler/file-crawler';
 import {SimpleFileCrawler} from 'acrolinx-batch-api/dist/src/crawler/simple-file-crawler';
 import {ICheckItem} from 'acrolinx-batch-api/src/batch-checker-internal';
@@ -11,6 +11,7 @@ import React, {Component} from 'react';
 import {FastList} from './components/fast-list';
 import {MenuBar, MenuItem} from './components/menu-bar';
 import './utils/global-fetch-polyfill';
+import {Config} from './config';
 import Timeout = NodeJS.Timeout;
 import BoxElement = Widgets.BoxElement;
 import BoxOptions = Widgets.BoxOptions;
@@ -20,7 +21,7 @@ import Screen = Widgets.Screen;
 interface AppProps {
   screen: Screen;
   acrolinxEndpoint: AcrolinxEndpoint;
-  accessToken: string;
+  config: Config;
   referencePattern: string;
 }
 
@@ -44,12 +45,13 @@ export class App extends Component<AppProps, AppState> {
   constructor(props: AppProps) {
     super(props);
 
-    this.batchChecker = new BatchCheckerInternal(props.acrolinxEndpoint, props.accessToken);
+    this.batchChecker = new BatchCheckerInternal(props.acrolinxEndpoint, props.config.accessToken);
     this.batchChecker.batchCheckEvents.addedCheckItemToFileQueue.on(this.onChangedCheckItems);
     this.batchChecker.batchCheckEvents.removedCheckItemFromFileQueue.on(this.onChangedCheckItems);
     this.batchChecker.batchCheckEvents.crawlingStarted.on(this.startWorkingIndicator);
     this.batchChecker.batchCheckEvents.crawlingDone.on(this.stopWorkingIndicator);
     this.batchChecker.batchCheckEvents.checkResult.on(this.onCheckResult);
+    this.batchChecker.batchCheckEvents.done.on(this.batchCheckDone);
 
     this.state = {
       filesToCheck: [],
@@ -128,12 +130,13 @@ export class App extends Component<AppProps, AppState> {
   check = () => {
     this.batchChecker.checkOptions = {
       batchId: getUUID('ac'),
-      // guidanceProfileId: this.state.selectedGuidanceProfileId,
+      guidanceProfileId: this.props.config.guidanceProfile,
       disableCustomFieldValidation: true,
       checkType: CheckType.batch,
       reportTypes: [ReportType.request_text, ReportType.scorecard]
     };
     this.batchChecker.start();
+    this.startWorkingIndicator();
   };
 
   quit = () => {
@@ -216,8 +219,12 @@ export class App extends Component<AppProps, AppState> {
   };
 
   private onCheckResult = (_checkResult: ICheckResult) => {
-    // console.log('onCheckResult', JSON.stringify(checkResult, null , 2));
     this.onChangedCheckItems();
+  };
+
+  private batchCheckDone = (batchCheckFinished: IBatchCheckFinished) => {
+    this.onChangedCheckItems();
+    this.stopWorkingIndicator();
   };
 }
 

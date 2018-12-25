@@ -1,4 +1,5 @@
 {
   "serverAddress": "http://localhost:8031",
-  "accessToken": "..."
+  "accessToken": "...",
+  "guidanceProfile": "f7c17937-54ee-4477-a0e5-76120b44e491"
 }

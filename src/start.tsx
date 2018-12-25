@@ -41,7 +41,7 @@ async function startApp() {
   const component = render(<App
     screen={screen}
     acrolinxEndpoint={acrolinxEndpoint}
-    accessToken={config.accessToken}
+    config={config}
     referencePattern={capabilities.referencePattern}
   />, screen);
 

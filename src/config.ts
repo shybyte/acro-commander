@@ -2,9 +2,10 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-interface Config {
+export interface Config {
   serverAddress: string;
   accessToken: string;
+  guidanceProfile?: string;
 }
 
 const configFile = path.join(os.homedir(), '.config', 'acro-commander.config.json');
