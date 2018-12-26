@@ -70,7 +70,7 @@ export class App extends Component<AppProps, AppState> {
           isEnabled: () => !!this.state.aggregatedReportUrl
         },
         {text: 'Clear', keys: ['f5'], callback: this.clear, isEnabled: this.hasFilesToCheck},
-        {text: 'Remove', keys: ['f6'], callback: this.removeCheckItem, isEnabled: this.checkItemActionPossible},
+        {text: 'Remove', keys: ['f6', 'delete'], callback: this.removeCheckItem, isEnabled: this.checkItemActionPossible},
         {text: 'Quit', keys: ['f10', 'escape', 'q', 'C-c'], callback: this.quit, isEnabled: _.constant(true)},
       ],
     };
