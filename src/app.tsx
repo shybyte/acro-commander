@@ -76,10 +76,17 @@ export class App extends Component<AppProps, AppState> {
           callback: this.removeCheckItem,
           isEnabled: this.checkItemActionPossible
         },
+        {text: 'Stop', keys: ['f7'], callback: this.stop, isEnabled: this.isWorking},
         {text: 'Quit', keys: ['f10', 'escape', 'q', 'C-c'], callback: this.quit, isEnabled: _.constant(true)},
       ],
     };
   }
+
+  stop = () => {
+    this.batchChecker.stop();
+  };
+
+  isWorking= () => !!this.state.isWorkingTimeout
 
   hasFilesToCheck = () => this.state.filesToCheck.length > 0
 

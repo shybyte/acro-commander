@@ -1,6 +1,5 @@
 TODO: 
 * Remove common path prefix
-* Stop crawling / checking
 
 
 QUESTIONS:
