@@ -10,3 +10,4 @@ QUESTIONS:
 * zeit/pkg vs nexe?
 * inconsistent format of getLinkToAggregatedReport?
 * show analysis after clear/change?
+* openUrl: spawnSync vs spawn
