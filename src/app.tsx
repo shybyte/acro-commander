@@ -70,7 +70,12 @@ export class App extends Component<AppProps, AppState> {
           isEnabled: () => !!this.state.aggregatedReportUrl
         },
         {text: 'Clear', keys: ['f5'], callback: this.clear, isEnabled: this.hasFilesToCheck},
-        {text: 'Remove', keys: ['f6', 'delete'], callback: this.removeCheckItem, isEnabled: this.checkItemActionPossible},
+        {
+          text: 'Remove',
+          keys: ['f6', 'delete'],
+          callback: this.removeCheckItem,
+          isEnabled: this.checkItemActionPossible
+        },
         {text: 'Quit', keys: ['f10', 'escape', 'q', 'C-c'], callback: this.quit, isEnabled: _.constant(true)},
       ],
     };
@@ -132,7 +137,7 @@ export class App extends Component<AppProps, AppState> {
     if (fs.statSync(completePath).isDirectory()) {
       this.batchChecker.addCrawler(new SimpleFileCrawler(completePath, true, undefined, this.props.referencePattern))
     } else {
-      this.batchChecker.addCrawler(new FileCrawler(completePath))
+      this.onFileManagerFileAction(completePath);
     }
   }
 
@@ -176,6 +181,14 @@ export class App extends Component<AppProps, AppState> {
     return `${this.state.count} ${this.renderCount} Documents to Check${filesToCheckCountDisplay}${workingIndicator}`;
   }
 
+  private onFileManagerFileAction = (file: string) => {
+    if (new RegExp(this.props.referencePattern).test(file)) {
+      this.batchChecker.addCrawler(new FileCrawler(file, undefined, this.props.referencePattern))
+    } else {
+      this.showMessage('We can\'t check this file.');
+    }
+  }
+
   render() {
     const filesToCheck = this.state.filesToCheck;
     this.renderCount++;
@@ -186,6 +199,7 @@ export class App extends Component<AppProps, AppState> {
           keys={true}
           mouse={true}
           invertSelected={true}
+          onFile={this.onFileManagerFileAction}
           {...commonListStyle(this.props.screen.focused === (this.fileManagerRef.current && this.fileManagerRef.current))}
         >
         </blessed-filemanager>
@@ -251,12 +265,7 @@ export class App extends Component<AppProps, AppState> {
     const selectedItem = this.state.filesToCheck[this.checkItemListRef.current!.selectedIndex];
 
     if ('error' in selectedItem.state) {
-      this.setState({
-        message: selectedItem.state.error.message
-      });
-      setTimeout(() => {
-        this.setState({message: undefined});
-      }, 1000);
+      this.showMessage(selectedItem.state.error.message)
       return;
     }
 
@@ -264,6 +273,15 @@ export class App extends Component<AppProps, AppState> {
       openUrl(selectedItem.state.reports[ReportType.scorecard].linkAuthenticated);
     }
   };
+
+  private showMessage(message: string) {
+    this.setState({
+      message: message
+    });
+    setTimeout(() => {
+      this.setState({message: undefined});
+    }, 1000);
+  }
 
   private openAnalysisDashboard = () => {
     if (this.state.aggregatedReportUrl) {
