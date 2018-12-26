@@ -1,5 +1,4 @@
 TODO: 
-* Display checking progress
 * Remove common path prefix
 * Stop crawling / checking
 

@@ -174,12 +174,28 @@ export class App extends Component<AppProps, AppState> {
     this.fileManagerRef.current!.focus();
   }
 
-  getCheckItemListLabel() {
+  getCheckProgressDisplayString() {
     const filesToCheck = this.state.filesToCheck;
-    const filesToCheckCountDisplay = filesToCheck.length ? ` (${filesToCheck.length})` : '';
+    if (!filesToCheck.length) {
+      return '';
+    }
+
+    const successfulCheckedCount = _.chain(filesToCheck).filter(({state}) => 'acrolinxScore' in state).size().value();
+    const failedCheckedCount = _.chain(filesToCheck).filter(({state}) => 'error' in state).size().value();
+    const checkedCount = successfulCheckedCount + failedCheckedCount;
+
+    if (!this.batchChecker.isRunning() && !checkedCount) {
+      return ` (${filesToCheck.length})`;
+    }
+
+    return ` (${checkedCount}/${filesToCheck.length})` + (failedCheckedCount ? ` Failed ${failedCheckedCount}`:  '');
+  }
+
+
+  getCheckItemListLabel() {
     const symbols = ['|', '/', '-', '\\'];
     const workingIndicator = this.state.isWorkingTimeout ? ' ' + symbols[this.state.isWorkingIndex % symbols.length] + ' ' : '';
-    return `${this.state.count} ${this.renderCount} Documents to Check${filesToCheckCountDisplay}${workingIndicator}`;
+    return `${this.state.count} ${this.renderCount} Documents to Check${this.getCheckProgressDisplayString()}${workingIndicator}`;
   }
 
   private onFileManagerFileAction = (file: string) => {
