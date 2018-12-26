@@ -61,7 +61,7 @@ export class App extends Component<AppProps, AppState> {
       filesToCheck: [],
       isWorkingIndex: 0,
       menu: [
-        {text: 'Add', keys: ['f1'], callback: this.add, isEnabled: this.isFileManagerFocused},
+        {text: 'Select', keys: ['f1'], callback: this.add, isEnabled: this.isFileManagerFocused},
         {text: 'Check', keys: ['f2'], callback: this.check, isEnabled: this.hasFilesToCheck},
         {text: 'Scorecard', keys: ['f3'], callback: this.onCheckItemAction, isEnabled: this.checkItemActionPossible},
         {
@@ -219,7 +219,7 @@ export class App extends Component<AppProps, AppState> {
   }
 
   getCheckItemListLabel() {
-    return ['Documents to Check', this.getCheckProgressDisplayString(), this.getWorkingIndicator()].join('');
+    return ['Files to Check', this.getCheckProgressDisplayString(), this.getWorkingIndicator()].join('');
   }
 
   private onFileManagerFileAction = (file: string) => {
