@@ -76,3 +76,4 @@ dist
 package-lock.json
 .idea
 bin
+.private

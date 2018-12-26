@@ -62,7 +62,7 @@ export class App extends Component<AppProps, AppState> {
       isWorkingIndex: 0,
       count: 0,
       menu: [
-        {text: 'Add', keys: ['f1'], callback: this.add, isEnabled: _.constant(true)},
+        {text: 'Add', keys: ['f1'], callback: this.add, isEnabled: this.isFileManagerFocused},
         {text: 'Check', keys: ['f2'], callback: this.check, isEnabled: this.hasFilesToCheck},
         {text: 'Scorecard', keys: ['f3'], callback: this.onCheckItemAction, isEnabled: this.checkItemActionPossible},
         {
@@ -86,12 +86,15 @@ export class App extends Component<AppProps, AppState> {
     this.batchChecker.stop();
   };
 
-  isWorking= () => !!this.state.isWorkingTimeout
+  isWorking = () => !!this.state.isWorkingTimeout
 
   hasFilesToCheck = () => this.state.filesToCheck.length > 0
 
-  checkItemActionPossible = () =>
-    this.hasFilesToCheck() && this.props.screen.focused === this.checkItemListRef.current!.focusElement
+  isFileManagerFocused = () => this.props.screen.focused === this.fileManager;
+
+  isCheckItemListFocused = () => this.props.screen.focused === this.checkItemListRef.current!.focusElement;
+
+  checkItemActionPossible = () => this.hasFilesToCheck() && this.isCheckItemListFocused();
 
   startWorkingIndicator = () => {
     const timeout = setInterval(() => {
@@ -132,13 +135,22 @@ export class App extends Component<AppProps, AppState> {
       }
     }, 50);
 
-    const fileManager = this.fileManagerRef.current!;
-    fileManager.refresh();
-    fileManager.focus();
+    this.fileManager.refresh();
+    this.fileManager.focus();
+  }
+
+  onCd = () => {
+    setTimeout(() => {
+      this.forceUpdate();
+    }, 10);
+  };
+
+  get fileManager() {
+    return this.fileManagerRef.current!;
   }
 
   add = () => {
-    const fileManager = this.fileManagerRef.current!;
+    const fileManager = this.fileManager;
     let selectedFilename = (fileManager as any).value;
     let completePath = path.join(fileManager.cwd, selectedFilename);
     if (fs.statSync(completePath).isDirectory()) {
@@ -195,14 +207,14 @@ export class App extends Component<AppProps, AppState> {
       return ` (${filesToCheck.length})`;
     }
 
-    return ` (${checkedCount}/${filesToCheck.length})` + (failedCheckedCount ? ` Failed ${failedCheckedCount}`:  '');
+    return ` (${checkedCount}/${filesToCheck.length})` + (failedCheckedCount ? ` Failed ${failedCheckedCount}` : '');
   }
 
 
   getCheckItemListLabel() {
     const symbols = ['|', '/', '-', '\\'];
     const workingIndicator = this.state.isWorkingTimeout ? ' ' + symbols[this.state.isWorkingIndex % symbols.length] + ' ' : '';
-    return `${this.state.count} ${this.renderCount} Documents to Check${this.getCheckProgressDisplayString()}${workingIndicator}`;
+    return `Documents to Check${this.getCheckProgressDisplayString()}${workingIndicator}`;
   }
 
   private onFileManagerFileAction = (file: string) => {
@@ -224,6 +236,7 @@ export class App extends Component<AppProps, AppState> {
           mouse={true}
           invertSelected={true}
           onFile={this.onFileManagerFileAction}
+          onCd={this.onCd}
           {...commonListStyle(this.props.screen.focused === (this.fileManagerRef.current && this.fileManagerRef.current))}
         >
         </blessed-filemanager>
@@ -261,16 +274,19 @@ export class App extends Component<AppProps, AppState> {
   }
 
   private renderCheckItem = (checkItem: ICheckItem): string => {
+    const file = checkItem.file.replace(new RegExp('^' + this.fileManager.cwd + '/'), '');
+
     if ('error' in checkItem.state) {
-      return '{red-fg}{white-bg}ERR{/} ' + checkItem.file
+      return '{red-fg}{white-bg}ERR{/} ' + file
     }
+
     if ('acrolinxScore' in checkItem.state) {
       const {acrolinxScore, qualityStatus} = checkItem.state;
       const acrolinxScorePadded = _.padStart(acrolinxScore.toString(), 3);
-      return `{${qualityStatus}-fg}${acrolinxScorePadded}{/}  ${checkItem.file}`;
-    } else {
-      return checkItem.file;
+      return `{${qualityStatus}-fg}${acrolinxScorePadded}{/}  ${file}`;
     }
+
+    return file;
   };
 
   private changeFocus = () => {
@@ -282,21 +298,27 @@ export class App extends Component<AppProps, AppState> {
   };
 
   private removeCheckItem = () => {
-    const selectedItem = this.state.filesToCheck[this.checkItemListRef.current!.selectedIndex];
+    const selectedItem = this.getSelectedCheckItem();
     this.batchChecker.removeCheckItem(selectedItem.id);
   };
 
+  private getSelectedCheckItem = () => this.state.filesToCheck[this.checkItemListRef.current!.selectedIndex];
+
   private onCheckItemAction = () => {
-    const selectedItem = this.state.filesToCheck[this.checkItemListRef.current!.selectedIndex];
+    const selectedItem = this.getSelectedCheckItem();
 
     if ('error' in selectedItem.state) {
-      this.showMessage(selectedItem.state.error.message)
+      this.showMessage(selectedItem.state.error.message);
       return;
     }
 
     if ('reports' in selectedItem.state && selectedItem.state.reports[ReportType.scorecard]) {
       openUrl(selectedItem.state.reports[ReportType.scorecard].linkAuthenticated);
+      return;
+    } else {
+      this.showMessage('No scorecard available yet. Please check!');
     }
+
   };
 
   private showMessage(message: string) {
