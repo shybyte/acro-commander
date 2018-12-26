@@ -41,7 +41,7 @@ export class App extends Component<AppProps, AppState> {
   renderCount: number = 0;
 
   fileManagerRef = React.createRef<FileManagerElement>();
-  checkItemListRef = React.createRef<FastList>();
+  checkItemListRef = React.createRef<FastList<ICheckItem>>();
   messageRef = React.createRef<MessageElement>();
 
   focusedElement: any;
@@ -234,7 +234,8 @@ export class App extends Component<AppProps, AppState> {
           label={this.getCheckItemListLabel()}
           left="50%" height="100%-1"
           {...commonListStyle(this.props.screen.focused === (this.checkItemListRef.current && this.checkItemListRef.current.focusElement))}
-          items={filesToCheck.map(this.renderCheckItem)}
+          items={filesToCheck}
+          renderItem={this.renderCheckItem}
           onEnter={this.onCheckItemAction}
         >
         </FastList>

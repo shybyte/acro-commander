@@ -6,25 +6,26 @@ import ListElement = Widgets.ListElement;
 import Screen = Widgets.Screen;
 
 
-interface FastListProps extends BoxOptions {
-  items: string[]
+interface FastListProps<T> extends BoxOptions {
+  items: ReadonlyArray<T>;
   label: string;
   screen: Screen;
   onEnter: () => void;
+  renderItem: (item: T) => string;
 }
 
 interface FastListState {
   offset: number;
 }
 
-export class FastList extends Component<FastListProps, FastListState> {
+export class FastList<T> extends Component<FastListProps<T>, FastListState> {
   state: FastListState = {
     offset: 0,
-  }
+  };
 
   listRef = React.createRef<ListElement>();
 
-  constructor(props: FastListProps) {
+  constructor(props: FastListProps<T>) {
     super(props);
   }
 
@@ -85,6 +86,7 @@ export class FastList extends Component<FastListProps, FastListState> {
   }
 
   render() {
+    const subList = this.props.items.slice(this.state.offset, this.state.offset + this.getInnerListHeight() + 1);
     return (
       <blessed-list
         {...this.props}
@@ -92,7 +94,7 @@ export class FastList extends Component<FastListProps, FastListState> {
         tags={true}
         mouse={true}
         invertSelected={false}
-        items={this.props.items.slice(this.state.offset, this.state.offset + this.getInnerListHeight() + 1)}
+        items={subList.map(this.props.renderItem)}
       >
 
       </blessed-list>
