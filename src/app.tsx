@@ -143,6 +143,7 @@ export class App extends Component<AppProps, AppState> {
 
   check = async () => {
     const batchId = getUUID('ac');
+    this.batchChecker.selectAllCheckItems();
 
     this.batchChecker.checkOptions = {
       batchId: batchId,

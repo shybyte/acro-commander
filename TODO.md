@@ -1,6 +1,7 @@
 TODO: 
-* Re-Check
 * Display checking progress
+* Remove common path prefix
+* Stop crawling / checking
 
 
 QUESTIONS:
