@@ -1,8 +1,6 @@
 import {Widgets} from 'blessed';
 import React, {Component} from 'react';
 import BoxOptions = Widgets.BoxOptions;
-import Events = Widgets.Events;
-import ListElement = Widgets.ListElement;
 import Screen = Widgets.Screen;
 import BoxElement = Widgets.BoxElement;
 
@@ -14,14 +12,11 @@ export interface MenuItem {
 }
 
 interface MenuBarProps extends BoxOptions {
-  menuItems: MenuItem[]
+  menuItems: MenuItem[];
   screen: Screen;
 }
 
-interface MenuBarState {
-}
-
-export class MenuBar extends Component<MenuBarProps, MenuBarState> {
+export class MenuBar extends Component<MenuBarProps, {}> {
   boxRef = React.createRef<BoxElement>();
 
   constructor(props: MenuBarProps) {
@@ -70,7 +65,7 @@ export class MenuBar extends Component<MenuBarProps, MenuBarState> {
 function getMenuItemContent(menuItem: MenuItem): string {
   const keyPart = '{#222-bg} ' + menuItem.keys[0].toUpperCase();
   const labelPart = `{cyan-bg}{#${menuItem.isEnabled() ? '000' : '666'}-fg}` + menuItem.text;
-  return keyPart + labelPart
+  return keyPart + labelPart;
 }
 
 export function executeIfEnabled(menuItem: MenuItem) {

@@ -11,10 +11,11 @@ import React, {Component} from 'react';
 import {FastList} from './components/fast-list';
 import {executeIfEnabled, MenuBar, MenuItem} from './components/menu-bar';
 import {Config} from './config';
+import {ImprovedFileManagerElement} from './typings/blessed-improved';
 import './utils/global-fetch-polyfill';
 import Timeout = NodeJS.Timeout;
+import BlessedElement = Widgets.BlessedElement;
 import BoxOptions = Widgets.BoxOptions;
-import FileManagerElement = Widgets.FileManagerElement;
 import MessageElement = Widgets.MessageElement;
 import Screen = Widgets.Screen;
 
@@ -29,7 +30,6 @@ interface AppState {
   filesToCheck: ReadonlyArray<ICheckItem>;
   isWorkingTimeout?: Timeout;
   isWorkingIndex: number;
-  count: number;
   menu: MenuItem[];
   aggregatedReportUrl?: string;
   message?: string;
@@ -40,11 +40,11 @@ export class App extends Component<AppProps, AppState> {
   batchChecker: BatchCheckerInternal;
   renderCount: number = 0;
 
-  fileManagerRef = React.createRef<FileManagerElement>();
+  fileManagerRef = React.createRef<ImprovedFileManagerElement>();
   checkItemListRef = React.createRef<FastList<ICheckItem>>();
   messageRef = React.createRef<MessageElement>();
 
-  focusedElement: any;
+  lastFocusedElement?: BlessedElement;
 
   constructor(props: AppProps) {
     super(props);
@@ -60,7 +60,6 @@ export class App extends Component<AppProps, AppState> {
     this.state = {
       filesToCheck: [],
       isWorkingIndex: 0,
-      count: 0,
       menu: [
         {text: 'Add', keys: ['f1'], callback: this.add, isEnabled: this.isFileManagerFocused},
         {text: 'Check', keys: ['f2'], callback: this.check, isEnabled: this.hasFilesToCheck},
@@ -82,23 +81,23 @@ export class App extends Component<AppProps, AppState> {
     };
   }
 
-  stop = () => {
-    this.batchChecker.stop();
-  };
+  get fileManager() {
+    return this.fileManagerRef.current!;
+  }
 
-  isWorking = () => !!this.state.isWorkingTimeout
+  get checkItemList() {
+    return this.checkItemListRef.current!;
+  }
 
-  hasFilesToCheck = () => this.state.filesToCheck.length > 0
-
-  isFileManagerFocused = () => this.props.screen.focused === this.fileManager;
-
-  isCheckItemListFocused = () => this.props.screen.focused === this.checkItemListRef.current!.focusElement;
-
+  isWorking = () => !!this.state.isWorkingTimeout;
+  hasFilesToCheck = () => this.state.filesToCheck.length > 0;
+  isFileManagerFocused = () => this.isFocused(this.fileManager);
+  isCheckItemListFocused = () => this.checkItemList && this.isFocused(this.checkItemList.focusElement);
   checkItemActionPossible = () => this.hasFilesToCheck() && this.isCheckItemListFocused();
 
   startWorkingIndicator = () => {
     const timeout = setInterval(() => {
-      this.setState({isWorkingIndex: this.state.isWorkingIndex + 1})
+      this.setState({isWorkingIndex: this.state.isWorkingIndex + 1});
     }, 200);
     this.setState({isWorkingTimeout: timeout});
   }
@@ -112,14 +111,11 @@ export class App extends Component<AppProps, AppState> {
 
   onChangedCheckItems = _.throttle(() => {
     const checkItems = this.batchChecker.getCheckItems();
-    this.setState({
-      filesToCheck: checkItems,
-      count: this.state.count + 1
-    });
+    this.setState({filesToCheck: checkItems});
     if (_.isEmpty(checkItems)) {
-      this.fileManagerRef.current!.focus();
+      this.fileManager.focus();
     }
-  }, 200)
+  }, 200);
 
   componentDidMount(): void {
     for (const menuItem of this.state.menu) {
@@ -129,8 +125,8 @@ export class App extends Component<AppProps, AppState> {
     this.props.screen.key(['tab'], this.changeFocus);
 
     setInterval(() => {
-      if (this.props.screen.focused !== this.focusedElement) {
-        this.focusedElement = this.props.screen.focused;
+      if (this.props.screen.focused !== this.lastFocusedElement) {
+        this.lastFocusedElement = this.props.screen.focused;
         this.forceUpdate();
       }
     }, 50);
@@ -145,19 +141,21 @@ export class App extends Component<AppProps, AppState> {
     }, 10);
   };
 
-  get fileManager() {
-    return this.fileManagerRef.current!;
-  }
-
   add = () => {
     const fileManager = this.fileManager;
-    let selectedFilename = (fileManager as any).value;
-    let completePath = path.join(fileManager.cwd, selectedFilename);
+    const selectedFilename = fileManager.value;
+    const completePath = path.join(fileManager.cwd, selectedFilename);
     if (fs.statSync(completePath).isDirectory()) {
-      this.batchChecker.addCrawler(new SimpleFileCrawler(completePath, true, undefined, this.props.referencePattern))
+      this.batchChecker.addCrawler(
+        new SimpleFileCrawler(completePath, true, undefined, this.props.referencePattern)
+      ).catch(this.onError);
     } else {
       this.onFileManagerFileAction(completePath);
     }
+  }
+
+  onError = (error: Error) => {
+    this.showMessage(error.message);
   }
 
   check = async () => {
@@ -165,13 +163,13 @@ export class App extends Component<AppProps, AppState> {
     this.batchChecker.selectAllCheckItems();
 
     this.batchChecker.checkOptions = {
-      batchId: batchId,
+      batchId,
       guidanceProfileId: this.props.config.guidanceProfile,
       disableCustomFieldValidation: true,
       checkType: CheckType.batch,
       reportTypes: [ReportType.request_text, ReportType.scorecard]
     };
-    this.batchChecker.start();
+    this.batchChecker.start().catch(this.onError);
 
     this.startWorkingIndicator();
 
@@ -182,6 +180,10 @@ export class App extends Component<AppProps, AppState> {
     });
   }
 
+  stop = () => {
+    this.batchChecker.stop();
+  };
+
   quit = () => {
     process.exit(0);
   }
@@ -190,7 +192,7 @@ export class App extends Component<AppProps, AppState> {
     this.setState({filesToCheck: []});
     this.batchChecker.stop();
     this.batchChecker.resetCheckItems();
-    this.fileManagerRef.current!.focus();
+    this.fileManager.focus();
   }
 
   getCheckProgressDisplayString() {
@@ -210,16 +212,21 @@ export class App extends Component<AppProps, AppState> {
     return ` (${checkedCount}/${filesToCheck.length})` + (failedCheckedCount ? ` Failed ${failedCheckedCount}` : '');
   }
 
+  getWorkingIndicator() {
+    const rotatingAnimationFrames = ['|', '/', '-', '\\'];
+    const animationFrame = rotatingAnimationFrames[this.state.isWorkingIndex % rotatingAnimationFrames.length];
+    return this.state.isWorkingTimeout ? ` ${animationFrame} ` : '';
+  }
 
   getCheckItemListLabel() {
-    const symbols = ['|', '/', '-', '\\'];
-    const workingIndicator = this.state.isWorkingTimeout ? ' ' + symbols[this.state.isWorkingIndex % symbols.length] + ' ' : '';
-    return `Documents to Check${this.getCheckProgressDisplayString()}${workingIndicator}`;
+    return ['Documents to Check', this.getCheckProgressDisplayString(), this.getWorkingIndicator()].join('');
   }
 
   private onFileManagerFileAction = (file: string) => {
     if (new RegExp(this.props.referencePattern).test(file)) {
-      this.batchChecker.addCrawler(new FileCrawler(file, undefined, this.props.referencePattern))
+      this.batchChecker.addCrawler(
+        new FileCrawler(file, undefined, this.props.referencePattern)
+      ).catch(this.onError);
     } else {
       this.showMessage('We can\'t check this file.');
     }
@@ -231,13 +238,13 @@ export class App extends Component<AppProps, AppState> {
     return (
       <>
         <blessed-filemanager
-          ref={this.fileManagerRef} label="Select File/Folder" left="0" width="half" height="100%-1"
+          ref={this.fileManagerRef} label='Select File/Folder' left='0' width='half' height='100%-1'
           keys={true}
           mouse={true}
           invertSelected={true}
           onFile={this.onFileManagerFileAction}
           onCd={this.onCd}
-          {...commonListStyle(this.props.screen.focused === (this.fileManagerRef.current && this.fileManagerRef.current))}
+          {...commonListStyle(this.isFileManagerFocused())}
         >
         </blessed-filemanager>
 
@@ -245,23 +252,23 @@ export class App extends Component<AppProps, AppState> {
           ref={this.checkItemListRef}
           screen={this.props.screen}
           label={this.getCheckItemListLabel()}
-          left="50%" height="100%-1"
-          {...commonListStyle(this.props.screen.focused === (this.checkItemListRef.current && this.checkItemListRef.current.focusElement))}
+          left='50%' height='100%-1'
+          {...commonListStyle(this.isCheckItemListFocused())}
           items={filesToCheck}
           renderItem={this.renderCheckItem}
           onEnter={this.onCheckItemAction}
         >
         </FastList>
 
-        <MenuBar top="100%-1" menuItems={this.state.menu} screen={this.props.screen}/>
+        <MenuBar top='100%-1' menuItems={this.state.menu} screen={this.props.screen}/>
 
         {this.state.message && <blessed-message
           ref={this.messageRef}
           content={this.state.message}
-          top="center"
-          left="center"
-          width="50%"
-          height="50%"
+          top='center'
+          left='center'
+          width='50%'
+          height='50%'
           border={{type: 'line'}}
           style={{
             bg: 'red',
@@ -274,10 +281,10 @@ export class App extends Component<AppProps, AppState> {
   }
 
   private renderCheckItem = (checkItem: ICheckItem): string => {
-    const file = checkItem.file.replace(new RegExp('^' + this.fileManager.cwd + '/'), '');
+    const file = checkItem.file.replace(new RegExp(`^${this.fileManager.cwd}/`), '');
 
     if ('error' in checkItem.state) {
-      return '{red-fg}{white-bg}ERR{/} ' + file
+      return '{red-fg}{white-bg}ERR{/} ' + file;
     }
 
     if ('acrolinxScore' in checkItem.state) {
@@ -289,13 +296,16 @@ export class App extends Component<AppProps, AppState> {
     return file;
   };
 
+
   private changeFocus = () => {
-    if (this.props.screen.focused === this.fileManagerRef.current && !_.isEmpty(this.state.filesToCheck)) {
-      this.checkItemListRef.current!.focus();
+    if (this.isFocused(this.fileManager) && this.hasFilesToCheck) {
+      this.checkItemList.focus();
     } else {
-      this.fileManagerRef.current!.focus();
+      this.fileManager.focus();
     }
   };
+
+  isFocused = (el: BlessedElement) => this.props.screen.focused === el;
 
   private removeCheckItem = () => {
     const selectedItem = this.getSelectedCheckItem();
@@ -323,7 +333,7 @@ export class App extends Component<AppProps, AppState> {
 
   private showMessage(message: string) {
     this.setState({
-      message: message
+      message
     });
     setTimeout(() => {
       this.setState({message: undefined});
@@ -356,6 +366,6 @@ function commonListStyle(hasFocus: boolean): BoxOptions {
       label: {bg: 'blue'},
       selected: {bg: hasFocus ? 'cyan' : 'blue'},
     }
-  }
+  };
 }
 

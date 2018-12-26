@@ -1,8 +1,8 @@
 import {Widgets} from 'blessed';
 import React, {Component} from 'react';
+import {ImprovedListElement} from '../typings/blessed-improved';
 import BoxOptions = Widgets.BoxOptions;
 import Events = Widgets.Events;
-import ListElement = Widgets.ListElement;
 import Screen = Widgets.Screen;
 
 
@@ -23,18 +23,22 @@ export class FastList<T> extends Component<FastListProps<T>, FastListState> {
     offset: 0,
   };
 
-  listRef = React.createRef<ListElement>();
+  listRef = React.createRef<ImprovedListElement>();
 
   constructor(props: FastListProps<T>) {
     super(props);
   }
 
+  get listElement() {
+    return this.listRef.current!;
+  }
+
   get selectedIndex() {
-    return (this.listRef.current! as any).selected + this.state.offset;
+    return this.listElement.selected + this.state.offset;
   }
 
   componentDidMount(): void {
-    const listElement = this.listRef.current!;
+    const listElement = this.listElement!;
 
     listElement.on('resize', () => {
       this.forceUpdate();
@@ -42,29 +46,29 @@ export class FastList<T> extends Component<FastListProps<T>, FastListState> {
 
     listElement.on('keypress', (_ch, key: Events.IKeyEventArg) => {
       const height = this.getInnerListHeight();
-      const selectedIndex = (listElement as any).selected;
+      const selectedIndex = listElement.selected;
       const offset = this.state.offset;
       if (key.name === 'enter') {
         this.props.onEnter();
       } else if (key.name === 'down') {
         if (selectedIndex === height - 1 && offset < this.props.items.length - this.getInnerListHeight()) {
           const newOffset = offset + 1;
-          delete (listElement as any).selected;
+          delete listElement.selected;
           this.setState({offset: newOffset});
           setTimeout(() => {
             listElement.select(this.getInnerListHeight() - 1);
-          }, 0)
+          }, 0);
         } else {
           listElement.down(1);
         }
       } else if (key.name === 'up') {
         if (selectedIndex === 0 && offset > 0) {
           const newOffset = offset - 1;
-          delete (listElement as any).selected;
+          delete listElement.selected;
           this.setState({offset: newOffset});
           setTimeout(() => {
             listElement.select(0);
-          }, 0)
+          }, 0);
         } else {
           listElement.up(1);
         }
@@ -74,15 +78,15 @@ export class FastList<T> extends Component<FastListProps<T>, FastListState> {
   }
 
   get focusElement() {
-    return this.listRef.current!;
+    return this.listElement;
   }
 
   focus() {
-    this.listRef.current!.focus();
+    this.focusElement.focus();
   }
 
   getInnerListHeight() {
-    return (this.listRef.current ? this.listRef.current.height : this.props.screen.height) as number - 2;
+    return (this.listElement ? this.listElement.height : this.props.screen.height) as number - 2;
   }
 
   render() {

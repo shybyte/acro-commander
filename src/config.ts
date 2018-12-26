@@ -15,11 +15,11 @@ export function readConfig(): Config {
   const config: Config = JSON.parse(configFileContent);
 
   if (!config.accessToken) {
-    throw new Error('Missing "accessToken" in config file.')
+    throw new Error('Missing "accessToken" in config file.');
   }
 
   if (!config.serverAddress) {
-    throw new Error('Missing "serverAddress" in config file.')
+    throw new Error('Missing "serverAddress" in config file.');
   }
 
   return config;

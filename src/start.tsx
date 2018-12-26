@@ -33,7 +33,7 @@ async function startApp() {
     title: APP_NAME
   });
 
-  const component = render(<App
+  render(<App
     screen={screen}
     acrolinxEndpoint={acrolinxEndpoint}
     config={config}
@@ -42,6 +42,7 @@ async function startApp() {
 }
 
 startApp().catch((error) => {
+  // tslint:disable:next-line: no-console
   console.error(error);
 });
 
