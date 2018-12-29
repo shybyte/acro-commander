@@ -1,5 +1,5 @@
 {
-  "name": "acrocommander",
+  "name": "acro-commander",
   "version": "0.1.0",
   "description": "norton-commander-like terminal ui app for batch checking with Acrolinx",
   "bin": {
