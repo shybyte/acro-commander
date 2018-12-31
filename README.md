@@ -10,3 +10,7 @@ In HOME/.config/acro-commander.config.json
 }
 
 ```
+
+## Copyright
+
+Copyright (c) 2018 Marco Stahl
