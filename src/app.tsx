@@ -50,6 +50,8 @@ export class App extends Component<AppProps, AppState> {
     super(props);
 
     this.batchChecker = new BatchCheckerInternal(props.acrolinxEndpoint, props.config.accessToken);
+    this.batchChecker.maxConcurrentChecks = 3;
+
     this.batchChecker.batchCheckEvents.addedCheckItemToFileQueue.on(this.onChangedCheckItems);
     this.batchChecker.batchCheckEvents.removedCheckItemFromFileQueue.on(this.onChangedCheckItems);
     this.batchChecker.batchCheckEvents.crawlingStarted.on(this.startWorkingIndicator);
@@ -285,6 +287,12 @@ export class App extends Component<AppProps, AppState> {
 
     if ('error' in checkItem.state) {
       return '{red-fg}{white-bg}ERR{/} ' + file;
+    }
+
+    if ('percent' in checkItem.state) {
+      const {percent} = checkItem.state;
+      const percentPadded = _.padStart(percent.toString(), 3);
+      return `${percentPadded}% ${file}`;
     }
 
     if ('acrolinxScore' in checkItem.state) {
