@@ -286,13 +286,13 @@ export class App extends Component<AppProps, AppState> {
     const file = checkItem.file.replace(new RegExp(`^${this.fileManager.cwd}/`), '');
 
     if ('error' in checkItem.state) {
-      return '{red-fg}{white-bg}ERR{/} ' + file;
+      return '{blink}{red-fg}{white-bg}ERR{/} ' + file;
     }
 
     if ('percent' in checkItem.state) {
       const {percent} = checkItem.state;
       const percentPadded = _.padStart(percent.toString(), 3);
-      return `${percentPadded}% ${file}`;
+      return `{blink}${percentPadded}%{/} ${file}`;
     }
 
     if ('acrolinxScore' in checkItem.state) {
