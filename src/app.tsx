@@ -318,7 +318,12 @@ export class App extends Component<AppProps, AppState> {
     const selectedItem = this.getSelectedCheckItem();
 
     if ('error' in selectedItem.state) {
-      this.showMessage(selectedItem.state.error.message);
+      const error = selectedItem.state.error;
+      if ('type' in error) {
+        this.showMessage(error.title + '\n\n' + error.detail);
+      } else {
+        this.showMessage(error.message);
+      }
       return;
     }
 
