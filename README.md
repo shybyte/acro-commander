@@ -11,6 +11,10 @@ In HOME/.config/acro-commander.config.json
 
 ```
 
+## License
+
+MIT
+
 ## Copyright
 
-Copyright (c) 2018 Marco Stahl
+Copyright (c) 2018-present Marco Stahl
